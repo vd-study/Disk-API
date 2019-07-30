@@ -1,0 +1,6 @@
+framework module Pods_yandexdisk {
+  umbrella header "Pods-yandexdisk-umbrella.h"
+
+  export *
+  module * { export * }
+}
