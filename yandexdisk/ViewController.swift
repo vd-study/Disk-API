@@ -88,6 +88,13 @@ final class ViewController: UIViewController {
         requestTokenViewController.delegate = self
         present(requestTokenViewController, animated: false, completion: nil)
     }
+    private func giveHeaders() -> HTTPHeaders {
+        let headers: HTTPHeaders = [
+            "Authorization": "OAuth \(token)",
+            "Accept": "application/json"
+        ]
+        return headers
+    }
     
     @objc
     private func updateData() {
@@ -96,28 +103,24 @@ final class ViewController: UIViewController {
             return
         }
         
-        let headers: HTTPHeaders = [
-            "Authorization": "OAuth \(token)",
-            "Accept": "application/json"
-        ]
-        
         let parameters: Parameters = ["media_type": "image"]
         
         Alamofire.request(diskAPI,
                           method: .get,
                           parameters: parameters ,
-                          headers: headers)
+                          headers: giveHeaders())
             .responseJSON{ response in
             
             if let _ = response.result.value {
-                guard let newFiles = try? JSONDecoder().decode(DiskResponse.self, from: response.data!) else { return }
+                guard let data = response.data else {return}
+                guard let newFiles = try? JSONDecoder().decode(DiskResponse.self, from: data) else { return }
                 print("Received \(newFiles.items?.count ?? 0) files")
                 self.filesData = newFiles
                 self.tableView.refreshControl?.endRefreshing()
                 self.tableView.reloadData()
                 
             } else {
-                print(response)
+                print(response.error?.localizedDescription ?? "Response have a error.")
             }
             
         }
@@ -129,18 +132,13 @@ final class ViewController: UIViewController {
         
         let fullNameArr = fileUrl.components(separatedBy: "/") // get special name from new picture
         
-        let headers: HTTPHeaders = [
-            "Authorization": "OAuth \(token)",
-            "Accept": "application/json"
-        ]
-        
         let parameters: Parameters = ["url": fileUrl , "path": fullNameArr[fullNameArr.count - 3]]
         
         Alamofire.request("https://cloud-api.yandex.net/v1/disk/resources/upload",
                           method: .post,
                           parameters: parameters,
                           encoding: URLEncoding.queryString,
-                          headers: headers).validate().responseJSON { response in
+                          headers: giveHeaders()).validate().responseJSON { response in
                             switch response.result {
                             case .success:
                                 print("File added in Disk!")
@@ -196,13 +194,9 @@ extension ViewController: FileTableViewCellDelegate {
         
         guard let _ = URL(string: stringUrl) else { return }
         
-        let headers: HTTPHeaders = [
-            "Authorization": "OAuth \(token)",
-            "Accept": "application/json"
-        ]
         Alamofire.request(stringUrl,
                           method: .get,
-                          headers: headers).responseData { response in
+                          headers: giveHeaders()).responseData { response in
             guard let data = response.result.value else { return }
             let image = UIImage(data: data)
             completion(image)
@@ -213,6 +207,3 @@ extension ViewController: FileTableViewCellDelegate {
 private let diskAPI = "https://cloud-api.yandex.net/v1/disk/resources/files"
 private let fileCellIdentifier = "FileTableViewCell"
 private let textFieldHeight: CGFloat = 44
-
-
-
